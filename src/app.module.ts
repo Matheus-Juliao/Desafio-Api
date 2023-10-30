@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductModule } from './domain/product/api/v1/product.module';
+import { StoreModule } from './domain/store/api/v1/store.module';
+import { ProductStoreModule } from './domain/product-store/api/v1/product-store.module';
 
 @Module({
   imports: [
@@ -16,9 +16,11 @@ import { ProductModule } from './domain/product/api/v1/product.module';
       synchronize: true, // Somente para desenvolvimento
       entities: [__dirname + '/**/*entity{.js,.ts}'],
     }),
-    ProductModule
+    ProductModule,
+    StoreModule,
+    ProductStoreModule
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

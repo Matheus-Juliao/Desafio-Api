@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { ProductStoreEntity } from "src/domain/product-store/entity/product-store.entity";
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('produto')
 export class ProductEntity {
@@ -13,4 +14,7 @@ export class ProductEntity {
   
     @Column({ type: 'bytea', nullable: true, name: 'imagem' })
     image: Buffer;
+
+    @OneToMany(() => ProductStoreEntity, productStore => productStore.product)
+    products: ProductStoreEntity[]; 
 }
