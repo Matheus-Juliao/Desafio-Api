@@ -9,11 +9,19 @@ export function IsImageValid(validationOptions?: ValidationOptions) {
       options: validationOptions,
       validator: {
         validate(value: any, args: ValidationArguments) {
-          if (!value) {
-            return false;
+          if (value == null) {
+            return true; // Permite valor nulo
           }
-          const validMimeTypes = ['image/jpeg', 'image/png'];
-          return validMimeTypes.includes(value.type);
+
+          if (value.startsWith('data:image/jpeg')) {
+            return true;
+          }
+
+          if (value.startsWith('data:image/png')) {
+            return true;
+          }
+
+          return false;
         },
       },
     });

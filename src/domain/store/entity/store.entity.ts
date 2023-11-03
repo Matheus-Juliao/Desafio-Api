@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { ProductStoreEntity } from "src/domain/product-store/entity/product-store.entity";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('loja')
 export class StoreEntity {
@@ -7,4 +8,7 @@ export class StoreEntity {
 
   @Column({ type: 'varchar', length: 60, name: 'descricao' })
   description: string;
+
+  @OneToMany(() => ProductStoreEntity, productStore => productStore.store)
+  stores: ProductStoreEntity[];
 }
