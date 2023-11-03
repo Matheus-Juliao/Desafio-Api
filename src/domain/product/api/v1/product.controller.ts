@@ -1,9 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpStatus, Param, Post, Put, Query, Response } from "@nestjs/common";
 import { ProductService } from "../../service/product-service";
 import { ProductRequest } from "./request/product-request";
-import { ProductResponse } from "./response/product-response";
 import { ProductEntity } from "../../entity/product.entity";
-import { ProductUpdateRequest } from "./request/product-update-request";
 import { Messages } from "src/config/messages/messages";
 
 @Controller('v1/product')
@@ -11,8 +9,8 @@ export class ProductController {
     constructor(private produtoService: ProductService) {}
 
     @Post()
-    async create(@Body() productRequest: ProductRequest): Promise<ProductResponse> {
-        return this.produtoService.create(productRequest);
+    async create(@Body() productRequest: ProductRequest, @Response() res): Promise<Messages> {
+        return res.status(HttpStatus.CREATED).send(await this.produtoService.create(productRequest)); ;
     }
 
     @Get()
@@ -23,18 +21,13 @@ export class ProductController {
             return this.produtoService.get(page, limit, sort);
     }
 
-    @Put('/:id')
-    async update(@Param('id') id: number, @Body() productUpdateRequest: ProductUpdateRequest): Promise<ProductResponse>{
-        return this.produtoService.update(id, productUpdateRequest);
+    @Put('/:productId')
+    async update(@Param('productId') productId: number, @Body() productRequest: ProductRequest): Promise<Messages>{
+        return this.produtoService.update(productId, productRequest);
     }
 
-    @Delete('/:id')
-    async delete(@Param('id') id: number): Promise<Messages> {
-        return this.produtoService.delete(id);
-    }
-
-    @Get('/:productId')
-    async listStorePriceSale(@Param('productId') productId: number): Promise<any[]> {
-        return this.produtoService.listStorePriceSale(productId);
+    @Delete('/:productId')
+    async delete(@Param('productId') productId: number): Promise<Messages> {
+        return this.produtoService.delete(productId);
     }
 }

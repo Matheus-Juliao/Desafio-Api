@@ -10,5 +10,4 @@ export class ProductStorePriceSaleResponse {
         this.description = productStoreModel.description
         this.priceSale = productStoreModel.priceSale
     }
-
 }

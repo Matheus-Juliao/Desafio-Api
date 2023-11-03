@@ -1,25 +1,21 @@
-import { HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
+import { BadRequestException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
 import { ProductEntity } from "../entity/product.entity";
 import { DataSource, Repository } from "typeorm";
 import { ProductRequest } from "../api/v1/request/product-request";
-import { ProductResponse } from "../api/v1/response/product-response";
-import { ProductUpdateRequest } from "../api/v1/request/product-update-request";
 import { Messages } from "src/config/messages/messages";
 import { ProductStoreEntity } from "src/domain/product-store/entity/product-store.entity";
-import { StoreEntity } from "src/domain/store/entity/store.entity";
+import { StoreModel } from "src/domain/store/model/store.model";
+import { InjectRepository } from "@nestjs/typeorm";
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectRepository(ProductEntity)
     private readonly produtcRepository: Repository<ProductEntity>,
-    @InjectRepository(ProductStoreEntity)
-    private readonly productStoreEntity: Repository<ProductStoreEntity>,
     private dataSource: DataSource
   ) {}
 
-  async create(productRequest: ProductRequest): Promise<ProductResponse> {
+  async create(productRequest: ProductRequest): Promise<Messages> {
     const product = {
       description: productRequest.description,
       cost: productRequest.cost,
@@ -27,18 +23,20 @@ export class ProductService {
     }
 
     return await this.dataSource.transaction(async manager => {
-      const responseProduct = await manager.save(this.produtcRepository.create(product));
+      const responseProduct = await manager.save(ProductEntity, product);
+      const seenIds = new Set();
 
       for(const store of productRequest.stores) {
-        const productStore = new ProductStoreEntity();
-        productStore.idProduct = responseProduct.id;
-        productStore.idStore = store.id;
-        productStore.priceSale = store.priceSale;
+        if(seenIds.has(store.id)) {
+          throw new BadRequestException('No more than one sale price is allowed for the same store');
+        }
+        seenIds.add(store.id);
 
-        await manager.save(this.productStoreEntity.create(productStore))
+        const productStore = this.newProductStore(responseProduct.id, store);
+        await manager.save(productStore)
       }
 
-      return new ProductResponse(responseProduct);
+      return new Messages(HttpStatus.CREATED.valueOf(), "Product saved successfully");
     })
   }
 
@@ -58,43 +56,71 @@ export class ProductService {
     };
   }
 
-  async update(id: number, productUpdateRequest: ProductUpdateRequest): Promise<ProductResponse> {
-    const product = await this.produtcRepository.findOneBy({id: id});
-
-    if(!product) {
-      throw new NotFoundException('Product not found');
-    }
-    const updateProduct = Object.assign(product, productUpdateRequest);
+  async update(productId: number, productRequest: ProductRequest): Promise<Messages> {
+    const product = await this.getProduct(productId);
+    const updateProduct = Object.assign(product, productRequest);
 
     return await this.dataSource.transaction(async manager => {
-      await manager.save(updateProduct);
+      await manager.update(ProductEntity, productId, {
+        description: updateProduct.description,
+        cost: updateProduct.cost,
+        image: updateProduct.image,
+      })
 
-      return new ProductResponse(updateProduct);
+      const seenIds = new Set();
+      const stores = await manager.findBy(ProductStoreEntity, { idProduct: productId });
+
+      for(const store of productRequest.stores) {
+        if(seenIds.has(store.id)) {
+          throw new BadRequestException('No more than one sale price is allowed for the same store');
+        }
+        seenIds.add(store.id);
+        let edit = false
+
+        for(const s of stores) {
+          if(s.idStore == store.id) {
+            await manager.update(ProductStoreEntity, s.id, { priceSale:  store.priceSale });
+            edit = true
+            break;
+          }
+        }
+        if(!edit) {
+          const productStore = this.newProductStore(productId, store);
+          await manager.save(ProductStoreEntity, productStore);
+        }
+      }
+      return new Messages(HttpStatus.OK.valueOf(), "Product edited successfully")
     });
   }
   
-  async delete(id: number): Promise<Messages> {
-    const product = await this.produtcRepository.findOneBy({id: id});
+  async delete(productId: number): Promise<Messages> {
+    await this.getProduct(productId);
+
+    return await this.dataSource.transaction(async manager => {
+      await manager.delete(ProductStoreEntity, { idProduct: productId })
+      await manager.delete(ProductEntity, productId);
+      
+      return new Messages(HttpStatus.OK.valueOf() , 'Product successfully deleted');
+    });
+  }
+
+  private async getProduct(productId: number): Promise<ProductEntity> {
+    const product = await this.produtcRepository.findOneBy({id: productId});
 
     if(!product) {
       throw new NotFoundException('Product not found');
     }
 
-    return await this.dataSource.transaction(async manager => {
-      await manager.delete(ProductEntity, id);
-
-      return new Messages(HttpStatus.OK.valueOf() , "Product successfully deleted");
-    });
+    return product;
   }
 
-  async listStorePriceSale(productId: number): Promise<any[]> {
-    return await this.dataSource
-    .getRepository(StoreEntity)
-    .createQueryBuilder('l')
-    .select(['l.id as id', 'l.description as description', 'pl.priceSale as priceSale'])
-    .innerJoin('produtoloja', 'pl', 'l.id = pl.idStore')
-    .where('pl.idProduct = :productId', { productId })
-    .getRawMany();
+  private newProductStore(idProduct: number, store: StoreModel): ProductStoreEntity {
+    const productStore = new ProductStoreEntity();
+    productStore.idProduct = idProduct;
+    productStore.idStore = store.id;
+    productStore.priceSale = store.priceSale;
+
+    return productStore;
   }
 
 }

@@ -5,10 +5,12 @@ import { StoreModel } from "src/domain/store/model/store.model";
 export class ProductRequest {
     @IsNotEmpty()
     description: string;
-    @IsNumber()
+
     cost: number;
-    @IsImageValid()
+
+    @IsImageValid({ message: "Only images in .png and .jpg format are allowed" })
     image: Buffer;
+
     @IsArray()
     @ArrayMinSize(1)
     stores: StoreModel[]
