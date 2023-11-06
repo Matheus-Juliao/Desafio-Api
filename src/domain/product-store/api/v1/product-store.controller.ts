@@ -5,8 +5,8 @@ import { ProductStoreService } from "../../service/product-store.service";
 export class ProductStoreController {
     constructor(private productStoreService: ProductStoreService) {}
 
-    @Get('/list-store-price-sale/:productId')
-    async listStorePriceSale(@Param('productId') productId: number): Promise<any[]> {
+    @Get('/list-store-image/:productId')
+    async listStorePriceSale(@Param('productId') productId: number): Promise<any> {
         return this.productStoreService.listStorePriceSale(productId);
     }
 }

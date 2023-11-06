@@ -9,7 +9,7 @@ export class ProductRequest {
     cost: number;
 
     @IsImageValid({ message: "Only images in .png and .jpg format are allowed" })
-    image: Buffer;
+    image: string;
 
     @IsArray()
     @ArrayMinSize(1)
